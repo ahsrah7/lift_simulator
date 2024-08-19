@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lift Simulation</title>
+  <!-- <link rel="stylesheet" href="styles.css"> -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+
+
+    #building {
+      display: grid;
+      width: 100%;
+      grid-template-rows: 100px;
+      overflow-x: auto;
+      white-space: no-wrap;
+    }
+
+    .floor {
+      display: grid;
+      grid-template-columns: 80px 10fr;
+      
+      height: 100px;
+      min-height: 100px;
+      width: 100%;
+      /* justify-content: space-between; */
+      outline: 1px solid #0e0a0a;
+      padding: 0px 10px;
+    }
+
+    .lift {
+      display: flex;
+      justify-content: space-between;
+      width: 40px;
+      min-width: 40px;
+      height: 60px;
+      background-color: #888;
+      border: 1px solid #555;
+      transition: transform 2s ease;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 2px;
+      margin-left: 5px;
+    }
+
+
+    .door {
+      position: absolute;
+      height: 100%;
+      top: 0;
+      background-color: #ddd;
+      transition: transform 1.5s ease-in-out, background-color 1.5s ease-in-out;
+      /* Door animation */
+    }
+
+    .left-door {
+      left: 0;
+    }
+
+    .right-door {
+      right: 0;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .input {
+      font-size: 18px;
+      padding: 5px;
+      width: auto;
+      outline: none;
+      background: #FFFFFF;
+      color: #000000;
+      border: 1px solid #C4D1EB;
+      border-radius: 5px;
+      box-shadow: 3px 3px 2px 0px #E2E2E2;
+      transition: .3s ease;
+    }
+
+    .input:focus {
+      background: #F2F2F2;
+      border: 1px solid #5A7EC7;
+      border-radius: 10px;
+    }
+
+    .btn {
+      font-family: arial;
+      color: #FFFFFF !important;
+      font-size: 14px;
+      text-shadow: 0px 0px 0px #DEDEDE;
+      box-shadow: 1px 1px 1px #F9F9F9;
+      padding: 10px 25px;
+      border-radius: 10px;
+      border: 2px solid #3866A3;
+      background: #000000;
+      cursor: pointer;
+    
+    }
+
+    .btn-up {
+      color: #000 !important;
+      background: #ccc;
+      padding:5px 10px;
+    }
+
+    form {
+      display: flex;justify-content: space-evenly;align-items: flex-end;
+    }
+    
+    @media (max-width: 600px) {
+      #building {
+        width: 100%;
+      }
+
+      .lift {
+        width: 30px;
+        height: 45px;
+      }
+      form {
+        flex-direction: column;
+        align-items: center;
+      }
+      .btn {
+        margin-top: 10px;
+      }
+    }
+    
+  </style>
+</head>
+
+<body>
+  <div>
+    <form onsubmit="handleSubmit(event)" >
+      <div style="display: flex;flex-direction: column;">
+        <label style="padding-bottom: 0.5rem;" for="floors">Enter number of floors</label>
+        <input class="input" type="number" id="floors" name="floors" min="1" />
+      </div>
+
+      <div style="display: flex;flex-direction: column;">
+        <label style="padding-bottom: 0.5rem;" for="lifts">Enter number of lifts</label>
+        <input class="input" type="number" id="lifts" name="lifts" min="1" />
+      </div>
+
+      <div>
+        <button type="submit" class="btn">Render UI</button>
+      </div>
+    </form>
+  </div>
+  <div id="building">
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
