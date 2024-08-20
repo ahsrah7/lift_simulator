@@ -1,7 +1,8 @@
 const upBtn = (i)=>`<button class="btn btn-up" onclick="moveLift(${i},1)"> up </button>`;
 const downBtn =(i)=>`<button class="btn btn-up" onclick="moveLift(${i},-1)"> down </button>`;
 const datastore = {
-   queue :[]
+   queue :[],
+    
 };
 
 
@@ -21,7 +22,6 @@ function getAvailableLift(toFloor,direction) {
                     currlift = lift;
                 }
         });
-      
         return currlift;
     }else{
         datastore.queue = [...datastore.queue,{toFloor,direction}];
@@ -32,26 +32,37 @@ function getAvailableLift(toFloor,direction) {
 }
 
 function moveLift(floor,directionClicked) {
+    let floorState = datastore.floorButtonStates.find(floorState => floorState.id == floor);
+    if(parseInt(directionClicked) == 1 && !floorState.isUpBtnPressed){
+        floorState.isUpBtnPressed = true;
+    }else if(parseInt(directionClicked) == -1 && !floorState.isDownBtnPressed){
+        floorState.isDownBtnPressed = true;
+    }else{
+        return;
+    }
     
     const btnPressedOnFloor = parseInt(floor);
     let availableLift = getAvailableLift(btnPressedOnFloor,directionClicked);
-    // console.log(availableLift,floor,directionClicked)
+    
     if(!availableLift){
         return;
     }
+
     let destinationFloor = floor;
-    console.log(document.getElementById("floor-1").offsetHeight,document.getElementById("floor-"+floor).offsetHeight)
-     let distanceToMove = (destinationFloor - 1) * document.getElementById("floor-1").offsetHeight;
-    
-    let lift = document.getElementById("lift-" + availableLift.id);
-        lift.style.transform = `translateY(-${distanceToMove}px)`;
-        lift.style.transition = `transform ${2000*Math.abs(destinationFloor - availableLift.currentFloor ) }ms linear`;
-    datastore.lifts[availableLift.id - 1].state = datastore.STATUS[0];
+    if(availableLift.currentFloor != destinationFloor){
+        let distanceToMove = (destinationFloor - 1) * document.getElementById("floor-1").offsetHeight;
+
+        let lift = document.getElementById("lift-" + availableLift.id);
+            lift.style.transform = `translateY(-${distanceToMove}px)`;
+            lift.style.transition = `transform ${2000*Math.abs(destinationFloor - availableLift.currentFloor ) }ms linear`;
+    }
+        datastore.lifts[availableLift.id - 1].state = datastore.STATUS[0];
+     
    
     setTimeout(function(){
          
            availableLift.currentFloor = destinationFloor;
-        availableLift.direction = directionClicked;
+        availableLift.direction = parseInt(directionClicked);
         
            openLiftDoors(availableLift);
 
@@ -84,6 +95,13 @@ function closeLiftDoors(lift) {
     setTimeout(() => {
         
         datastore.lifts[lift.id - 1].state = datastore.STATUS[1];
+        let floorState = datastore.floorButtonStates.find(floorState => floorState.id == lift.currentFloor);
+        console.log(floorState,"-----------beforee")
+        if(parseInt(lift.direction) == 1)
+            floorState.isUpBtnPressed = false;
+        if(parseInt(lift.direction) == -1)
+            floorState.isDownBtnPressed = false;
+        console.log(floorState,"-----------after")
         checkAndProcessQueue();
     }, 2500); 
 }
@@ -99,6 +117,7 @@ function handleSubmit(event) {
     // Prevent the default form submission behavior
     event.preventDefault();
     datastore.lifts = [];
+    datastore.floorButtonStates = [];
      datastore.STATUS = ["moving", "stationary"];
         datastore.DIRECTION = {
             up:1,
@@ -157,15 +176,31 @@ function addFloor(floor) {
         btnGroupDiv.setAttribute("class", "btn-group");
 
         newDiv.appendChild(btnGroupDiv)
-        if (i == 1)
+        if (i == 1){
             btnGroupDiv.innerHTML = upBtn(i) +`<div>Floor ${i}</div><div></div>`;
-        else if (i == floor)
+            datastore.floorButtonStates.push({
+                    id : i,
+                    isUpBtnPressed : false,
+            })
+        }
+        else if (i == floor){
             btnGroupDiv.innerHTML = downBtn(i)+`<div>Floor ${i}</div><div></div>`;
+            datastore.floorButtonStates.push({
+                    id : i,
+                    isDownBtnPressed : false,
+            })
+        }
         else {
             btnGroupDiv.innerHTML = upBtn(i) +`<div>Floor ${i}</div>`+ downBtn(i);
+            datastore.floorButtonStates.push({
+                id : i,
+                isUpBtnPressed : false,
+                isDownBtnPressed : false
+            })
         }
 
         building.appendChild(newDiv);
+        
     }
 
 }
@@ -201,6 +236,7 @@ function addLift(lift) {
             direction: datastore.DIRECTION.up,
             state: datastore.STATUS[1],
         });
+      
     }
     floor.appendChild(newLiftContainer)
 }
