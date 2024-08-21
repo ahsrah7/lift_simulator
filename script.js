@@ -183,14 +183,14 @@ function addFloor(floor) {
 
         newDiv.appendChild(btnGroupDiv)
         if (i == 1){
-            btnGroupDiv.innerHTML = upBtn(i) +`<div>Floor ${i}</div><div></div>`;
+            btnGroupDiv.innerHTML = downBtn(i) +`<div>Floor ${i}</div><div></div>`;
             datastore.floorButtonStates.push({
                     id : i,
                     isUpBtnPressed : false,
             })
         }
         else if (i == floor){
-            btnGroupDiv.innerHTML = downBtn(i)+`<div>Floor ${i}</div><div></div>`;
+            btnGroupDiv.innerHTML = upBtn(i)+`<div>Floor ${i}</div><div></div>`;
             datastore.floorButtonStates.push({
                     id : i,
                     isDownBtnPressed : false,
