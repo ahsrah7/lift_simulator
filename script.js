@@ -31,8 +31,9 @@ function getAvailableLift(toFloor,direction) {
     
 }
 
-function moveLift(floor,directionClicked) {
+function moveLift(floor,directionClicked,t="") {
     let floorState = datastore.floorButtonStates.find(floorState => floorState.id == floor);
+    // console.log(floor,directionClicked,t,floorState)
     if(parseInt(directionClicked) == 1 && !floorState.isUpBtnPressed){
         floorState.isUpBtnPressed = true;
     }else if(parseInt(directionClicked) == -1 && !floorState.isDownBtnPressed){
@@ -96,12 +97,12 @@ function closeLiftDoors(lift) {
         
         datastore.lifts[lift.id - 1].state = datastore.STATUS[1];
         let floorState = datastore.floorButtonStates.find(floorState => floorState.id == lift.currentFloor);
-        console.log(floorState,"-----------beforee")
+        // console.log(floorState,"-----------beforee")
         if(parseInt(lift.direction) == 1)
             floorState.isUpBtnPressed = false;
         if(parseInt(lift.direction) == -1)
             floorState.isDownBtnPressed = false;
-        console.log(floorState,"-----------after")
+        // console.log(floorState,"-----------after",datastore.queue)
         checkAndProcessQueue();
     }, 2500); 
 }
@@ -109,8 +110,13 @@ function closeLiftDoors(lift) {
 function checkAndProcessQueue() {
     for(let i=0;i<datastore.queue.length;i++)
         if (datastore.queue.length > 0) {
+            
             const next = datastore.queue.shift(); 
-                moveLift(next.toFloor,next.direction); 
+            let floorState = datastore.floorButtonStates.find(floorState => floorState.id == next.toFloor);
+            floorState.isUpBtnPressed = false;
+             floorState.isDownBtnPressed = false;
+                moveLift(next.toFloor,next.direction,"queue"); 
+            
         }
 }
 function handleSubmit(event) {
