@@ -77,7 +77,9 @@ function openLiftDoors(lift) {
     const rightDoor = liftDiv.querySelector('.right-door');
 
     // Trigger door open animation
+     leftDoor.style.webkitTransform = `translateX(-100%)`;
     leftDoor.style.transform = `translateX(-100%)`;
+     rightDoor.style.webkitTransform = `translateX(100%)`;
     rightDoor.style.transform = `translateX(100%)`;
 
     setTimeout(() => {
@@ -89,8 +91,9 @@ function closeLiftDoors(lift) {
      let liftDiv = document.getElementById("lift-" + lift.id);
     const leftDoor = liftDiv.querySelector('.left-door');
     const rightDoor = liftDiv.querySelector('.right-door');
-
+    leftDoor.style.webkitTransform = `translateX(0)`;
     leftDoor.style.transform = `translateX(0)`;
+    rightDoor.style.webkitTransform = `translateX(0)`;
     rightDoor.style.transform = `translateX(0)`;
 
     setTimeout(() => {
