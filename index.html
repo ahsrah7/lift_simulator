@@ -32,6 +32,7 @@
       /* justify-content: space-between; */
       outline: 1px solid #0e0a0a;
       padding: 0px 10px;
+      position:relative;
     }
 
     .lift {
@@ -54,9 +55,12 @@
       position: absolute;
       height: 100%;
       top: 0;
+      will-change: transform;
       background-color: #ddd;
+      backface-visibility: hidden;
       transition: transform 1.5s ease-in-out, background-color 1.5s ease-in-out;
-      /* Door animation */
+      
+      
     }
 
     .left-door {
@@ -142,12 +146,12 @@
     <form onsubmit="handleSubmit(event)" >
       <div style="display: flex;flex-direction: column;">
         <label style="padding-bottom: 0.5rem;" for="floors">Enter number of floors</label>
-        <input class="input" min="0" inputmode="numeric" pattern="[0-9]*" type="number" id="floors" name="floors" min="1" />
+        <input class="input" type="number" id="floors" name="floors" min="1" />
       </div>
 
       <div style="display: flex;flex-direction: column;">
         <label style="padding-bottom: 0.5rem;" for="lifts">Enter number of lifts</label>
-        <input class="input" min="0" inputmode="numeric" pattern="[0-9]*" type="number" id="lifts" name="lifts" min="1" />
+        <input class="input" type="number" id="lifts" name="lifts" min="1" />
       </div>
 
       <div>
