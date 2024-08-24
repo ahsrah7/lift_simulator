@@ -2,18 +2,18 @@ const upBtn = (i)=>`<button class="btn btn-up" onclick="moveLift(${i},1)"> up </
 const downBtn =(i)=>`<button class="btn btn-up" onclick="moveLift(${i},-1)"> down </button>`;
 const datastore = {
    queue :[],
-    
+
 };
 
 
 function getAvailableLift(toFloor,direction) {
-    
-    
+
+
     // get the stationary lifts
     let stationaryLifts = datastore.lifts.filter(lift => lift.state == datastore.STATUS[1]);
      let minDist =  Number.MAX_VALUE;
     let currlift = null;
-    
+
     if (stationaryLifts.length > 0) {
     stationaryLifts.forEach(lift=>{
                 let dist = Math.abs(lift.currentFloor - toFloor);
@@ -28,7 +28,7 @@ function getAvailableLift(toFloor,direction) {
         return;
     }
 
-    
+
 }
 
 function moveLift(floor,directionClicked,t="") {
@@ -41,10 +41,10 @@ function moveLift(floor,directionClicked,t="") {
     }else{
         return;
     }
-    
+
     const btnPressedOnFloor = parseInt(floor);
     let availableLift = getAvailableLift(btnPressedOnFloor,directionClicked);
-    
+
     if(!availableLift){
         return;
     }
@@ -58,17 +58,17 @@ function moveLift(floor,directionClicked,t="") {
             lift.style.transition = `transform ${2000*Math.abs(destinationFloor - availableLift.currentFloor ) }ms linear`;
     }
         datastore.lifts[availableLift.id - 1].state = datastore.STATUS[0];
-     
-   
+
+
     setTimeout(function(){
-         
+
            availableLift.currentFloor = destinationFloor;
         availableLift.direction = parseInt(directionClicked);
-        
+
            openLiftDoors(availableLift);
 
        },(Math.abs(destinationFloor - availableLift.currentFloor ))*2*1000)
-    
+
 }
 
 function openLiftDoors(lift) {
@@ -97,7 +97,7 @@ function closeLiftDoors(lift) {
     rightDoor.style.transform = `translateX(0)`;
 
     setTimeout(() => {
-        
+
         datastore.lifts[lift.id - 1].state = datastore.STATUS[1];
         let floorState = datastore.floorButtonStates.find(floorState => floorState.id == lift.currentFloor);
         // console.log(floorState,"-----------beforee")
@@ -113,15 +113,16 @@ function closeLiftDoors(lift) {
 function checkAndProcessQueue() {
     for(let i=0;i<datastore.queue.length;i++)
         if (datastore.queue.length > 0) {
-            
+
             const next = datastore.queue.shift(); 
             let floorState = datastore.floorButtonStates.find(floorState => floorState.id == next.toFloor);
             floorState.isUpBtnPressed = false;
              floorState.isDownBtnPressed = false;
                 moveLift(next.toFloor,next.direction,"queue"); 
-            
+
         }
 }
+
 function handleSubmit(event) {
     // Prevent the default form submission behavior
     event.preventDefault();
@@ -155,7 +156,7 @@ function handleSubmit(event) {
             alert("Please enter valid inputs.");    
         return
         }
-        
+
         if(!(formData.lifts > 0)){
             alert("Number of lifts should be greater than 0");    
         return
@@ -165,12 +166,13 @@ function handleSubmit(event) {
         return
         }
     }
-   
+
 }
 
 
 function addFloor(floor) {
     const building = document.getElementById("building");
+    const fragment = document.createDocumentFragment();
     for (let i = floor; i > 0; i--) {
         // Create a new div element
         const newDiv = document.createElement("div");
@@ -207,10 +209,10 @@ function addFloor(floor) {
                 isDownBtnPressed : false
             })
         }
+        fragment.appendChild(newDiv); 
 
-        building.appendChild(newDiv);
-        
     }
+        building.appendChild(fragment);
 
 }
 
@@ -245,9 +247,8 @@ function addLift(lift) {
             direction: datastore.DIRECTION.up,
             state: datastore.STATUS[1],
         });
-      
+
     }
     floor.appendChild(newLiftContainer)
 }
-
 
