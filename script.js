@@ -1,94 +1,233 @@
-const upBtn = (i)=>`<button class="btn btn-up" onclick="moveLift(${i},1)"> up </button>`;
-const downBtn =(i)=>`<button class="btn btn-up" onclick="moveLift(${i},-1)"> down </button>`;
-const datastore = {
-   queue :[],
 
-};
+class stateStore {
+    static numberOfFloors = 0
+    static numberOfLifts = 0
+    // tracks floors lifts are going to
+    static #scheduledFloors = new Set()
+    // keeps the list of all the floors
+    static #floors = []
+    // keeps the list of all the lifts
+    static #lifts = []
 
 
-function getAvailableLift(toFloor,direction) {
-
-
-    // get the stationary lifts
-    let stationaryLifts = datastore.lifts.filter(lift => lift.state == datastore.STATUS[1]);
-     let minDist =  Number.MAX_VALUE;
-    let currlift = null;
-
-    if (stationaryLifts.length > 0) {
-    stationaryLifts.forEach(lift=>{
-                let dist = Math.abs(lift.currentFloor - toFloor);
-                if(dist < minDist){
-                    minDist = dist;
-                    currlift = lift;
-                }
-        });
-        return currlift;
-    }else{
-        datastore.queue = [...datastore.queue,{toFloor,direction}];
-        return;
+    // adds lift to list
+    static addLift(lift) {
+        this.#lifts.push(lift)
+    }
+    // gets the array of list
+    static getLiftList() {
+        return [...this.#lifts]
+    }
+    // clears the list of lifts
+    static clearLift() {
+        this.#lifts = []
+    }
+    // sets the list of lifts
+    static setLift(liftSet) {
+        this.#lifts = liftSet
+    }
+    // remove floor from scheduled floors once lift reach
+    static removeFromScheduledFloors(value) {
+        this.#scheduledFloors.delete(value)
+    }
+    // added new stops to a lift
+    static updateLiftStops(index, distance, floor,direction) {
+        // to check if a lift is already going to a particular floor
+        if (this.#scheduledFloors.has(floor))
+            return
+        this.#lifts[index].direction = direction;
+        this.#lifts[index].stops.push({ floor: floor, distance: distance })
+        // managing the stops in a priority queue by sorting according to
+        // relative distance of lift from floors
+        this.#lifts[index].stops.sort((a, b) => a.distance - b.distance)
+        this.#scheduledFloors.add(floor)
+    }
+    // opens and closes the door state
+    static toggleDoor(index) {
+        this.#lifts[index].door = !this.#lifts[index].door
     }
 
 
+    // adds new floors to floor list
+    static addFloor(floor) {
+        this.#floors.push(floor)
+    }
+    // gets the list of floors
+    static getFloorList() {
+        return [...this.#floors]
+    }
+    // clears the list of floors
+    static clearFloor() {
+        this.#floors = []
+    }
 }
 
-function moveLift(floor,directionClicked,t="") {
-    let floorState = datastore.floorButtonStates.find(floorState => floorState.id == floor);
-    // console.log(floor,directionClicked,t,floorState)
-    if(parseInt(directionClicked) == 1 && !floorState.isUpBtnPressed){
-        floorState.isUpBtnPressed = true;
-    }else if(parseInt(directionClicked) == -1 && !floorState.isDownBtnPressed){
-        floorState.isDownBtnPressed = true;
-    }else{
-        return;
+
+
+// This calculates the relative distance of a lift from a give floor
+// Takes the follow parameters 
+// currentFloor -> current floor lift is on
+// calledFloor -> the floor we have to calculate relative distance to
+// finalStop -> if lift is moving what is it's current final stop
+// calledDirection -> what button has been pressed up or down
+//                         6                 8           9            down
+function calculateDistance(currentFloor, calledFloor, finalStop, calledDirection) {
+    if (finalStop === undefined) {
+        return Math.abs(calledFloor - currentFloor)
     }
-
-    const btnPressedOnFloor = parseInt(floor);
-    let availableLift = getAvailableLift(btnPressedOnFloor,directionClicked);
-
-    if(!availableLift){
-        return;
+    if (finalStop > currentFloor ) {
+        if (currentFloor > calledFloor)
+            return (finalStop - currentFloor) + (finalStop - calledFloor)
+        else if (calledDirection === 'down' && calledFloor > currentFloor && calledFloor < finalStop)
+            return (finalStop - currentFloor) + (finalStop - calledFloor)
+        return calledFloor - currentFloor
     }
-
-    let destinationFloor = floor;
-    if(availableLift.currentFloor != destinationFloor){
-        let distanceToMove = (destinationFloor - 1) * document.getElementById("floor-1").offsetHeight;
-
-        let lift = document.getElementById("lift-" + availableLift.id);
-            lift.style.transform = `translateY(-${distanceToMove}px)`;
-            lift.style.transition = `transform ${2000*Math.abs(destinationFloor - availableLift.currentFloor ) }ms linear`;
-    }
-        datastore.lifts[availableLift.id - 1].state = datastore.STATUS[0];
-
-
-    setTimeout(function(){
-
-           availableLift.currentFloor = destinationFloor;
-        availableLift.direction = parseInt(directionClicked);
-
-           openLiftDoors(availableLift);
-
-       },(Math.abs(destinationFloor - availableLift.currentFloor ))*2*1000)
-
+    if (currentFloor < calledFloor)
+        return (currentFloor - finalStop) + (calledFloor - currentFloor)
+    else if (calledDirection === 'up' && calledFloor < currentFloor && calledFloor > finalStop)
+        return (currentFloor - finalStop) + (currentFloor - finalStop)
+    return currentFloor - calledFloor
 }
 
-function openLiftDoors(lift) {
-    let liftDiv = document.getElementById("lift-" + lift.id);
-    const leftDoor = liftDiv.querySelector('.left-door');
-    const rightDoor = liftDiv.querySelector('.right-door');
-
-    // Trigger door open animation
-     leftDoor.style.webkitTransform = `translateX(-100%)`;
-    leftDoor.style.transform = `translateX(-100%)`;
-     rightDoor.style.webkitTransform = `translateX(100%)`;
-    rightDoor.style.transform = `translateX(100%)`;
-
-    setTimeout(() => {
-        closeLiftDoors(lift);
-    }, 2500); 
+// This function handles task assignment that is which lift 
+// will go to which floor
+function assignTask(floor, calledDirection) {
+    let closestDistnce = Number.MAX_SAFE_INTEGER
+    let assignTo
+    stateStore.getLiftList().forEach((lift, index) => {
+        let distance = calculateDistance(lift.currentPosition, floor.floorNumber, lift.stops.length === 0 ? undefined : lift.stops[lift.stops.length - 1].floor, calledDirection)
+        console.log(distance,`${lift.htmlID} currentFloor=${lift.currentPosition}, calledFloor=${floor.floorNumber}, finalStop=${lift.stops.length === 0 ? undefined : lift.stops[lift.stops.length - 1].floor}, calledDirection=${calledDirection}`);
+        if (distance < closestDistnce) {
+            closestDistnce = distance
+            assignTo = { lift: lift, distance: distance, index: index }
+        }
+    })
+    stateStore.updateLiftStops(assignTo.index, assignTo.distance, floor.floorNumber,calledDirection)
 }
 
-function closeLiftDoors(lift) {
-     let liftDiv = document.getElementById("lift-" + lift.id);
+// This function creates the floors at UI level
+function createFloor() {
+    const floorList = stateStore.getFloorList()
+   const floorDivs = floorList.map((floor, index) => {
+        let div
+        if (index === 0) {
+            div = generateFloorElement(floor, true, false, index)
+            div.childNodes[1].childNodes[0].onclick = () => { assignTask(floor, 'up') }
+        }
+        else if (index === stateStore.numberOfFloors - 1) {
+            div = generateFloorElement(floor, false, true, index)
+            div.childNodes[1].childNodes[0].onclick = () => { assignTask(floor, 'down') }
+        }
+        else {
+            div = generateFloorElement(floor, true, true, index)
+            div.childNodes[1].childNodes[0].onclick = () => { assignTask(floor, 'up') }
+            div.childNodes[1].childNodes[1].onclick = () => { assignTask(floor, 'down') }
+        }
+        return div;
+    })
+  floorDivs.reverse().forEach(div=>document.getElementById("building").appendChild(div)
+  ) 
+}
+
+// This function creates the lifts at UI level
+function createLift() {
+    const liftList = stateStore.getLiftList()
+    liftList.map((lift, index) => {
+        const div = generateLiftElement(lift, index)
+        document.getElementById(`lift-container${lift.currentPosition}`).appendChild(div);
+    })
+}
+
+
+
+
+// generates up-down buttons
+function generateButtonElement(floor, up, down) {
+    const div = document.createElement("div")
+    div.id = `b${floor.floorNumber}`
+    div.classList.add('btn-group')
+    if (up) {
+        const upButton = document.createElement("button")
+        upButton.innerText = `UP`
+        upButton.classList.add('btn')
+        upButton.classList.add('up-btn')
+        div.appendChild(upButton)
+    }
+    if (down) {
+        const downButton = document.createElement("button")
+        downButton.innerHTML = `DOWN`
+        downButton.classList.add('btn')
+        downButton.classList.add('down-btn')
+        div.appendChild(downButton)
+    }
+    return div
+}
+
+
+// generates floor component
+function generateFloorElement(floor, up, down, index) {
+    const div = document.createElement("div")
+    const buttonDiv = generateButtonElement(floor, up, down)
+    const para = document.createElement("p")
+    const liftContainer = document.createElement('div')
+    para.innerText = `Floor ${floor.floorNumber + 1}`
+    div.id = floor.htmlID
+    liftContainer.classList.add('lift-container')
+    liftContainer.id = `lift-container${index}`
+    div.classList.add('floor')
+    div.appendChild(para)
+    div.appendChild(buttonDiv)
+    div.appendChild(liftContainer)
+    return div
+}
+
+
+// generates lift component
+function generateLiftElement(lift, index) {
+    const div = document.createElement("div")
+    div.style = `position: absolute; left: ${50 * index}px`
+
+    div.id = lift.htmlID
+    div.classList.add("lift")
+    const leftDoor = document.createElement('div');
+    leftDoor.classList.add('door', 'left-door');
+    leftDoor.style.width = '20px'; 
+
+    const rightDoor = document.createElement('div');
+            rightDoor.classList.add('door', 'right-door');
+            rightDoor.style.width = '20px';
+
+        div.appendChild(leftDoor);
+        div.appendChild(rightDoor);
+    return div
+}
+
+
+
+
+// initializes the floors and lifts for data models
+function handleCreate(lifts, floors) {
+    stateStore.clearLift()
+    stateStore.clearFloor()
+    const children = [...document.getElementById('building').childNodes]
+    children.forEach((item) => {
+        item.remove()
+    })
+    stateStore.numberOfFloors = floors
+    stateStore.numberOfLifts = lifts
+    for (let i = 0; i < lifts; i++) {
+        var lift = new Lift(i)
+        stateStore.addLift(lift)
+    }
+    for (let i = 0; i < floors; i++) {
+        var floor = new Floor(i)
+        stateStore.addFloor(floor)
+    }
+}
+
+
+function closeDoor(lift,index){
+    let liftDiv = document.getElementById(lift.htmlID);
     const leftDoor = liftDiv.querySelector('.left-door');
     const rightDoor = liftDiv.querySelector('.right-door');
     leftDoor.style.webkitTransform = `translateX(0)`;
@@ -96,159 +235,114 @@ function closeLiftDoors(lift) {
     rightDoor.style.webkitTransform = `translateX(0)`;
     rightDoor.style.transform = `translateX(0)`;
 
-    setTimeout(() => {
-
-        datastore.lifts[lift.id - 1].state = datastore.STATUS[1];
-        let floorState = datastore.floorButtonStates.find(floorState => floorState.id == lift.currentFloor);
-        // console.log(floorState,"-----------beforee")
-        if(parseInt(lift.direction) == 1)
-            floorState.isUpBtnPressed = false;
-        if(parseInt(lift.direction) == -1)
-            floorState.isDownBtnPressed = false;
-        // console.log(floorState,"-----------after",datastore.queue)
-        checkAndProcessQueue();
-    }, 2500); 
+    stateStore.toggleDoor(index)
 }
 
-function checkAndProcessQueue() {
-    for(let i=0;i<datastore.queue.length;i++)
-        if (datastore.queue.length > 0) {
+function openDoor(lift,index){
+    let liftDiv = document.getElementById(lift.htmlID);
+    const leftDoor = liftDiv.querySelector('.left-door');
+    const rightDoor = liftDiv.querySelector('.right-door');
 
-            const next = datastore.queue.shift(); 
-            let floorState = datastore.floorButtonStates.find(floorState => floorState.id == next.toFloor);
-            floorState.isUpBtnPressed = false;
-             floorState.isDownBtnPressed = false;
-                moveLift(next.toFloor,next.direction,"queue"); 
-
-        }
+    // Trigger door open animation
+    leftDoor.style.webkitTransform = `translateX(-100%)`;
+    leftDoor.style.transform = `translateX(-100%)`;
+    rightDoor.style.webkitTransform = `translateX(100%)`;
+    rightDoor.style.transform = `translateX(100%)`;
+    stateStore.toggleDoor(index)
 }
 
-function handleSubmit(event) {
-    // Prevent the default form submission behavior
-    event.preventDefault();
-    datastore.lifts = [];
-    datastore.floorButtonStates = [];
-     datastore.STATUS = ["moving", "stationary"];
-        datastore.DIRECTION = {
-            up:1,
-            down:-1
+// This function handles re-rendering and creates lift motion by translateY
+function handleRerender() {
+    const updatedStore = stateStore.getLiftList().map((lift, index) => {
+        // check if door of a lift has to opened
+        // console.log(JSON.stringify(lift));
+        
+        if (lift.door) {
+            // close door
+            closeDoor(lift,index)
         }
-     const building =  document.getElementById("building");
-    // Get the form element
-    const form = event.target;
-
-    // Create an object to store the form data
-    const formData = {};
-
-    // Iterate over the form elements
-    for (let element of form.elements) {
-        if (element.name && element.type !== "submit") {
-            formData[element.name] = element.value;
+        // check if a lift is running
+        else if (lift.direction !== 'none') {
+            // check if lift has reached the destination
+            if (lift.stops[0].floor === lift.currentPosition) {
+                // open door
+                openDoor(lift,index)
+                stateStore.removeFromScheduledFloors(lift.currentPosition)
+                lift.stops.shift()
+                if (lift.stops.length === 0)
+                    lift.direction = 'none'
+            }
+            // if not reached then move towards destination
+            else {
+                if (lift.stops[0].floor - lift.currentPosition > 0) {
+                    // move up
+                    
+                    lift.currentPosition = (lift.currentPosition + 1) % stateStore.numberOfFloors
+                    document.getElementById(lift.htmlID).style.transform = `translateY(${(-100) * lift.currentPosition}px)`
+                    document.getElementById(lift.htmlID).style.transition = 'transform 2000ms'
+                    document.getElementById(lift.htmlID).style.transitionTimingFunction = 'linear'
+                    lift.stops[0].distance = lift.stops[0].distance - 1
+                }
+                else {
+                    // move down
+                    lift.currentPosition = (lift.currentPosition - 1) >= 0 ? lift.currentPosition - 1 : lift.currentPosition - 1
+                    document.getElementById(lift.htmlID).style.transform = `translateY(${-100 * (lift.currentPosition)}px)`
+                    document.getElementById(lift.htmlID).style.transition = 'transform 2000ms'
+                    document.getElementById(lift.htmlID).style.transitionTimingFunction = 'linear'
+                    lift.stops[0].distance = lift.stops[0].distance - 1
+                }
+            }
         }
+        return lift
+    })
+
+    // update lifts state
+    stateStore.setLift(updatedStore)
+}
+
+
+// This is the Lift class, for creating data level abstration
+class Lift {
+    constructor(id, stops = [], currentPosition = 0, direction = 'none') {
+        this.id = id
+        this.htmlID = `lift${id}`
+        this.stops = stops
+        this.currentPosition = currentPosition
+        this.door = false
+        this.direction = direction
     }
 
-    if(formData.lifts && formData.floors && formData.lifts > 0 && formData.floors > 1){
-         building.innerHTML = '';
-        addFloor(formData.floors);
-        addLift(formData.lifts);
-    }else{
-        if(!(formData.lifts > 0) && !(formData.floors > 0)){
-            alert("Please enter valid inputs.");    
-        return
-        }
-
-        if(!(formData.lifts > 0)){
-            alert("Number of lifts should be greater than 0");    
-        return
-        }
-        if(!(formData.floors > 1)){    
-        alert("Number of floors should be greater than 1");
-        return
-        }
+    static addStop(stop) {
+        this.stops.push(stop)
     }
 
+    static reachedStop() {
+        this.stops.shift()
+    }
+}
+
+// This is floor class for creating data level abstration
+class Floor {
+    constructor(floorNumber) {
+        this.floorNumber = floorNumber
+        this.htmlID = `floor${floorNumber}`
+    }
 }
 
 
-function addFloor(floor) {
-    const building = document.getElementById("building");
-    const fragment = document.createDocumentFragment();
-    for (let i = floor; i > 0; i--) {
-        // Create a new div element
-        const newDiv = document.createElement("div");
 
-        // Set attributes for the new div
-        newDiv.setAttribute("id", "floor-" + i);
-        newDiv.setAttribute("class", "floor");
 
-        const btnGroupDiv = document.createElement("div");
 
-        // Set attributes for the new div
-        btnGroupDiv.setAttribute("class", "btn-group");
+// This adds functionality to the create button
+document.getElementById("create").addEventListener("click", (e) => {
+    e.preventDefault()
+    var lift = document.getElementById("lifts").value
+    var floor = document.getElementById("floors").value
+    handleCreate(lift, floor)
+    createFloor()
+    createLift()
+});
 
-        newDiv.appendChild(btnGroupDiv)
-        if (i == 1){
-            btnGroupDiv.innerHTML = downBtn(i) +`<div>Floor ${i}</div><div></div>`;
-            datastore.floorButtonStates.push({
-                    id : i,
-                    isUpBtnPressed : false,
-            })
-        }
-        else if (i == floor){
-            btnGroupDiv.innerHTML = upBtn(i)+`<div>Floor ${i}</div><div></div>`;
-            datastore.floorButtonStates.push({
-                    id : i,
-                    isDownBtnPressed : false,
-            })
-        }
-        else {
-            btnGroupDiv.innerHTML = upBtn(i) +`<div>Floor ${i}</div>`+ downBtn(i);
-            datastore.floorButtonStates.push({
-                id : i,
-                isUpBtnPressed : false,
-                isDownBtnPressed : false
-            })
-        }
-        fragment.appendChild(newDiv); 
-
-    }
-        building.appendChild(fragment);
-
-}
-
-function addLift(lift) {
-    const floor = document.getElementById("floor-1");
-    // floor.style.position = "relative";
-    const newLiftContainer = document.createElement("div");
-    newLiftContainer.style.display = "flex";
-    newLiftContainer.style.justifyContent = "space-evenly";
-    newLiftContainer.style.alignItems = "flex-end";
-    for (let i = 1; i <= lift; i++) {
-        // Create a new div element
-        const newLift = document.createElement("div");
-        // Set attributes for the new div
-        newLift.setAttribute("id", "lift-" + i);
-        newLift.setAttribute("class", "lift");
-        newLift.style.position = 'relative';
-        const leftDoor = document.createElement('div');
-        leftDoor.classList.add('door', 'left-door');
-        leftDoor.style.width = '20px'; 
-
-        const rightDoor = document.createElement('div');
-                rightDoor.classList.add('door', 'right-door');
-                rightDoor.style.width = '20px';
-
-            newLift.appendChild(leftDoor);
-            newLift.appendChild(rightDoor);
-        newLiftContainer.appendChild(newLift);
-        datastore.lifts.push({
-            id: i,
-            currentFloor: 1,
-            direction: datastore.DIRECTION.up,
-            state: datastore.STATUS[1],
-        });
-
-    }
-    floor.appendChild(newLiftContainer)
-}
-
+// This is the main runner function which runs handleRerender
+// in every 2s
+setInterval(async () => { handleRerender() }, 2000)
